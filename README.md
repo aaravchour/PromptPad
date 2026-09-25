@@ -27,7 +27,7 @@ Other available tools include find and replace, heading navigation, section acti
 
 ## Get PromptPad
 
-The source is available in this repository. The [Releases page](https://github.com/aaravchour/PromptPad/releases) is intended for downloadable builds; check it for an actual published version. The macOS bundle is currently ad-hoc signed, not notarised or Developer ID signed. Windows and Linux binaries have not been verified.
+Download the [PromptPad 0.1.0 macOS Apple Silicon preview](https://github.com/aaravchour/PromptPad/releases/tag/v0.1.0), or build from source below. The release includes a SHA-256 checksum. Unzip the archive and open `PromptPad.app`. The bundle is ad-hoc signed, not notarised or Developer ID signed; macOS may prevent opening it under normal Gatekeeper settings. Windows and Linux binaries have not been verified.
 
 ### macOS source build
 
