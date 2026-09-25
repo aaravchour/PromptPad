@@ -22,6 +22,9 @@ jobs:
       - name: Install Ninja on Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Select MSVC on Windows
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
       - name: Configure
         shell: pwsh
         run: cmake --preset release "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR"
