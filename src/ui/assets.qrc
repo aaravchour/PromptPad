@@ -1,0 +1,28 @@
+<RCC>
+  <qresource prefix="/figma">
+    <file alias="light-ellipsis.svg">assets/ellipsis.svg</file>
+    <file alias="light-copy.svg">assets/light-copy.svg</file>
+    <file alias="light-plus.svg">assets/light-plus.svg</file>
+    <file alias="light-close.svg">assets/light-close.svg</file>
+    <file alias="light-search.svg">assets/light-search.svg</file>
+    <file alias="light-all.svg">assets/light-all.svg</file>
+    <file alias="light-folder.svg">assets/light-folder.svg</file>
+    <file alias="light-document.svg">assets/light-document.svg</file>
+    <file alias="light-template.svg">assets/light-template.svg</file>
+    <file alias="light-save.svg">assets/light-save.svg</file>
+    <file alias="light-preview.svg">assets/light-preview.svg</file>
+    <file alias="light-settings.svg">assets/light-settings.svg</file>
+    <file alias="dark-ellipsis.svg">assets/dark-ellipsis.svg</file>
+    <file alias="dark-copy.svg">assets/dark-copy.svg</file>
+    <file alias="dark-plus.svg">assets/dark-plus.svg</file>
+    <file alias="dark-close.svg">assets/dark-close.svg</file>
+    <file alias="dark-search.svg">assets/dark-search.svg</file>
+    <file alias="dark-all.svg">assets/dark-all.svg</file>
+    <file alias="dark-folder.svg">assets/dark-folder.svg</file>
+    <file alias="dark-document.svg">assets/dark-document.svg</file>
+    <file alias="dark-template.svg">assets/dark-template.svg</file>
+    <file alias="dark-save.svg">assets/dark-save.svg</file>
+    <file alias="dark-preview.svg">assets/dark-preview.svg</file>
+    <file alias="dark-settings.svg">assets/dark-settings.svg</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,9 @@
+#pragma once
+
+#include <QString>
+
+// The display name follows the CMake project name. Storage filenames and the
+// command-line executable remain stable so an eventual rebrand keeps drafts.
+namespace AppIdentity {
+inline QString displayName() { return QStringLiteral("@PROMPTPAD_DISPLAY_NAME@"); }
+}

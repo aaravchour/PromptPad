@@ -1,0 +1,33 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          modules: 'qt5compat qtsvg'
+          cache: true
+      - name: Install Ninja on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure
+        shell: pwsh
+        run: cmake --preset release "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR"
+      - name: Build
+        shell: pwsh
+        run: cmake --build --preset release --parallel 4
+      - name: Test
+        shell: pwsh
+        run: ctest --test-dir build/release --output-on-failure

@@ -1,0 +1,26 @@
+build/
+dist/
+.DS_Store
+CMakeUserPresets.json
+cmake-build-*/
+.idea/
+.vscode/
+*.user
+*.swp
+*~
+
+# Local drafts and test profiles must never enter a source release.
+*.sqlite
+*.sqlite-*
+*.db
+/recovery/
+/profile/
+/data/
+
+# The supplied design brief and reference image are development inputs, not
+# redistributable application assets.
+/promptpad-codex-brief/
+
+# Historical design comparison contains a private account identifier and
+# design hand-off links; keep it local.
+/docs/screenshots/figma-implementation.md
