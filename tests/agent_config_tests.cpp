@@ -71,7 +71,8 @@ private slots:
         write(root + QStringLiteral("/SOUL.md"));
         write(root + QStringLiteral("/config.yaml"), "model: x\n");
         write(root + QStringLiteral("/skills/research/SKILL.md"));
-        const auto *hermes = find(AgentConfigs::detect(home.path()), QStringLiteral("hermes"));
+        const auto agents = AgentConfigs::detect(home.path());
+        const auto *hermes = find(agents, QStringLiteral("hermes"));
         QVERIFY(hermes);
         QCOMPARE(relativePaths(*hermes), (QStringList{
             QStringLiteral("SOUL.md"), QStringLiteral("memories/MEMORY.md"),
