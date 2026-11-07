@@ -28,12 +28,15 @@ It never calls AI, makes no network requests, has no telemetry and needs no acco
 
 Any tool that opens `$VISUAL` or `$EDITOR` and waits for it works the same way, including `git commit`. You can also skip the setup entirely: write in PromptPad and use **Edit → Copy Entire Prompt**.
 
+PromptPad also registers itself for Markdown files, so it can be your default app for `.md` in Finder (details under **Open Markdown files from Finder** below).
+
 ## Why PromptPad
 
 - **Write immediately.** A small floating editor opens to a blank draft in about 150 ms. No dashboard, sidebar or setup flow.
 - **Hand text back to your agent.** `--wait` blocks the caller until you choose Save and return; closing the draft cancels.
 - **Reuse what works.** A pop-out library holds drafts, folders, templates and snippets, with search and filters.
 - **Navigate long prompts.** Heading outline, section actions, folding, find and replace, multiple selections and split Markdown preview.
+- **Edit your agents' own files.** Tools → Agent files… (`Ctrl/Cmd+Shift+A`) lists the instruction Markdown of coding agents installed on this computer, such as Claude Code, Codex, Gemini CLI, Cursor and Hermes Agent: rules, personas, memories, sub-agents, commands and skills.
 - **Keep the source intact.** Plain UTF-8 files, existing BOM and newline bytes preserved, atomic saves with external-change checks.
 - **Native and small.** C++20, Qt 6 Widgets and Scintilla, not a web view. About 24 MB of memory for a blank editor.
 
@@ -72,6 +75,7 @@ PromptPad makes no network requests and has no telemetry or account. Drafts, tem
 | Switch Editor / Preview / Split Preview | View menu or `Ctrl+Alt+1/2/3`; **Edit** or Escape leaves full Preview |
 | Change writing width, wrap, font or appearance | View menu |
 | Open snippets, checkpoints or the command palette | Tools menu |
+| Edit installed agents' instruction files | Tools → Agent files… or `Ctrl/Cmd+Shift+A` |
 
 The menus show the platform's interpreted shortcuts. Preview does not render diagrams or mathematics.
 
@@ -85,6 +89,20 @@ The menus show the platform's interpreted shortcuts. Preview does not render dia
 ```
 
 `--wait` can begin with a missing file. Use **File → Save and return** to write it and signal success. Closing the draft or app cancels the waiting caller. Separate callers can wait on separate files; a second waiter for the same open document is rejected. The running instance is reused through a per-user local socket, with no TCP server.
+
+</details>
+
+<details>
+<summary><strong>Agent files</strong></summary>
+
+Tools › Agent files… (`Ctrl/Cmd+Shift+A`) lists the instruction Markdown of coding agents found on this computer, such as Claude Code (`~/.claude`), Codex (`~/.codex`), Hermes Agent (`~/.hermes`), Gemini CLI, Cursor, OpenCode, Amp, Windsurf, Qwen Code, Kiro and Cline. Open a global rules file, persona, memory, sub-agent, command or skill and edit it like any prompt. Well-known files that do not exist yet, such as Hermes `memories/USER.md`, are listed so you can create them on save. Add any other folder with Add folder…. Detection only lists files; nothing changes until you save.
+
+</details>
+
+<details>
+<summary><strong>Open Markdown files from Finder</strong></summary>
+
+`PromptPad.app` registers itself for Markdown (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`) and offers itself under **Open With** for plain text. On first launch it asks once whether to become the default app for `.md` files; you can do this later from **PromptPad → Make PromptPad the Default for Markdown Files…**. macOS may show its own confirmation. After that, double-clicking a Markdown file opens it in PromptPad, or in a new tab if PromptPad is already running. You can also pick another default at any time from a file's **Get Info → Open with → Change All…**.
 
 </details>
 

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 project(PromptPad VERSION 0.1.0 LANGUAGES CXX)
+if(APPLE)
+  enable_language(OBJCXX)
+endif()
 set(PROMPTPAD_DISPLAY_NAME "${PROJECT_NAME}")
 configure_file(src/app/AppIdentity.h.in generated/AppIdentity.h @ONLY)
 
@@ -35,14 +38,28 @@ add_library(promptpad_core STATIC
   src/documents/FindReplace.cpp src/documents/FindReplace.h
   src/storage/Store.cpp src/storage/Store.h
   src/launcher/Ipc.cpp src/launcher/Ipc.h
+  src/agents/AgentConfigs.cpp src/agents/AgentConfigs.h
   src/ui/MainWindow.cpp src/ui/MainWindow.h
-  src/ui/LibraryPanel.cpp src/ui/LibraryPanel.h src/ui/assets.qrc)
+  src/ui/LibraryPanel.cpp src/ui/LibraryPanel.h
+  src/ui/AgentFilesDialog.cpp src/ui/AgentFilesDialog.h src/ui/assets.qrc
+  src/platform/MarkdownHandler.h)
+if(APPLE)
+  target_sources(promptpad_core PRIVATE src/platform/MarkdownHandler_mac.mm)
+  target_link_libraries(promptpad_core PUBLIC "-framework AppKit" "-framework UniformTypeIdentifiers")
+else()
+  target_sources(promptpad_core PRIVATE src/platform/MarkdownHandler.cpp)
+endif()
 target_link_libraries(promptpad_core PUBLIC scintilla_qt lexilla_markdown Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Concurrent Qt6::Svg)
 target_include_directories(promptpad_core PUBLIC src ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 add_executable(promptpad MACOSX_BUNDLE src/app/main.cpp)
 target_link_libraries(promptpad PRIVATE promptpad_core)
-set_target_properties(promptpad PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "${PROMPTPAD_DISPLAY_NAME}")
+set_target_properties(promptpad PROPERTIES
+  MACOSX_BUNDLE_BUNDLE_NAME "${PROMPTPAD_DISPLAY_NAME}"
+  MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.aaravchour.promptpad"
+  MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+  MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+  MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/cmake/MacOSXBundleInfo.plist.in")
 
 enable_testing()
 add_executable(editor_smoke tests/editor_smoke.cpp)
@@ -62,6 +79,10 @@ add_executable(find_tests tests/find_tests.cpp)
 target_link_libraries(find_tests PRIVATE promptpad_core Qt6::Test)
 add_test(NAME find_tests COMMAND find_tests)
 set_tests_properties(find_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_executable(agent_config_tests tests/agent_config_tests.cpp)
+target_link_libraries(agent_config_tests PRIVATE promptpad_core Qt6::Test)
+add_test(NAME agent_config_tests COMMAND agent_config_tests)
+set_tests_properties(agent_config_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 add_executable(ui_capture tests/ui_capture.cpp)
 target_link_libraries(ui_capture PRIVATE promptpad_core)
 add_executable(ipc_tests tests/ipc_tests.cpp)

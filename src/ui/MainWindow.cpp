@@ -5,7 +5,9 @@
 #include "documents/FileIO.h"
 #include "documents/FindReplace.h"
 #include "editor/PromptEditor.h"
+#include "ui/AgentFilesDialog.h"
 #include "ui/LibraryPanel.h"
+#include "platform/MarkdownHandler.h"
 #include "Scintilla.h"
 
 #include <QtConcurrent>
@@ -51,6 +53,7 @@
 #include <QRegion>
 #include <QScreen>
 #include <QScrollBar>
+#include <QPointer>
 #include <QSettings>
 #include <QSplitter>
 #include <QStatusBar>
@@ -73,6 +76,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
+#include <utility>
 
 namespace {
 class SafeMarkdownPreview final : public QTextBrowser {
@@ -149,7 +153,7 @@ MainWindow::MainWindow(Store *store, bool createBlankIfEmpty, QWidget *parent) :
     connect(&previewDebounce_, &QTimer::timeout, this, &MainWindow::renderPreview);
     connect(&watcher_, &QFileSystemWatcher::fileChanged, this, &MainWindow::onExternalChange);
     restoreSession();
-    if (documents_.empty() && createBlankIfEmpty) newPrompt();
+    if (documents_.empty() && createBlankIfEmpty) startupBlankId_ = newPrompt();
     updateStatus();
 }
 
@@ -513,6 +517,12 @@ void MainWindow::buildMenus() {
     saveReturnMenuAction_->setVisible(false);
     file->addSeparator();
     add(file, QStringLiteral("Close tab"), QKeySequence::Close, [this] { closeTab(tabs_->currentIndex()); });
+    if (MarkdownHandler::supported()) {
+        // Qt moves ApplicationSpecificRole actions into the macOS application menu.
+        QAction *makeDefault = add(file, QStringLiteral("Make %1 the Default for Markdown Files…").arg(AppIdentity::displayName()),
+                                   {}, [this] { makeDefaultMarkdownHandler(); });
+        makeDefault->setMenuRole(QAction::ApplicationSpecificRole);
+    }
 
     auto *edit = menuBar()->addMenu(QStringLiteral("Edit"));
     add(edit, QStringLiteral("Undo"), QKeySequence::Undo, [this] { if (auto *doc = current()) doc->editor->send(SCI_UNDO); });
@@ -642,6 +652,7 @@ void MainWindow::buildMenus() {
     add(tools, QStringLiteral("Browse drafts…"), QKeySequence(QStringLiteral("Ctrl+Shift+L")), [this] { showLibrary(); });
     add(tools, QStringLiteral("Starred drafts…"), {}, [this] { showLibrary(true); });
     add(tools, QStringLiteral("Snippets…"), {}, [this] { showSnippets(); });
+    add(tools, QStringLiteral("Agent files…"), QKeySequence(QStringLiteral("Ctrl+Shift+A")), [this] { showAgentFiles(); });
     tools->addSeparator();
     add(tools, QStringLiteral("Command palette…"), QKeySequence(QStringLiteral("Ctrl+Shift+P")), [this] { showPalette(); });
     add(tools, QStringLiteral("Quick document switch…"), QKeySequence(QStringLiteral("Ctrl+K")), [this] { showPalette(true); });
@@ -1519,6 +1530,66 @@ void MainWindow::closeTab(int index) {
     if (viewMode_ != ViewMode::Editor) renderPreview();
 }
 
+void MainWindow::showAgentFiles() {
+    AgentFilesDialog dialog(this);
+    QString chosen;
+    bool exists = true;
+    connect(&dialog, &AgentFilesDialog::openRequested, &dialog, [&chosen, &exists](const QString &path, bool fileExists) {
+        chosen = path;
+        exists = fileExists;
+    });
+    if (dialog.exec() != QDialog::Accepted || chosen.isEmpty()) return;
+    if (!openPath(chosen, !exists).isEmpty() && !exists)
+        showNotice(QStringLiteral("New file. Save to create it for the agent."), 5000);
+}
+
+QString MainWindow::openFromSystem(const QString &path) {
+    const QString blankId = std::exchange(startupBlankId_, QString());
+    const QString id = openPath(path);
+    if (id.isEmpty()) return id;
+    if (Document *blank = byId(blankId); blank && blank->record.path.isEmpty() && !blank->record.modified
+        && blank->editor->lengthBytes() == 0 && documents_.size() > 1)
+        closeTab(tabs_->indexOf(blank->page));
+    if (Document *opened = byId(id)) tabs_->setCurrentWidget(opened->page);
+    if (isMinimized()) showNormal();
+    else show();
+    raise();
+    activateWindow();
+    return id;
+}
+
+void MainWindow::offerDefaultMarkdownHandler() {
+    if (!MarkdownHandler::supported() || MarkdownHandler::isDefault()) return;
+    QSettings settings;
+    const QString key = QStringLiteral("launch/offeredDefaultMarkdownHandler");
+    if (settings.value(key, false).toBool()) return;
+    settings.setValue(key, true);
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle(QStringLiteral("Open Markdown files with %1?").arg(AppIdentity::displayName()));
+    box.setText(QStringLiteral("Make %1 the default app for .md files?").arg(AppIdentity::displayName()));
+    box.setInformativeText(QStringLiteral("Double-clicking a Markdown file in Finder will open it here. "
+                                          "You can change this later from the %1 menu.").arg(AppIdentity::displayName()));
+    QPushButton *yes = box.addButton(QStringLiteral("Make Default"), QMessageBox::AcceptRole);
+    box.addButton(QStringLiteral("Not Now"), QMessageBox::RejectRole);
+    box.setDefaultButton(yes);
+    box.exec();
+    if (box.clickedButton() == yes) makeDefaultMarkdownHandler();
+}
+
+void MainWindow::makeDefaultMarkdownHandler() {
+    if (MarkdownHandler::isDefault()) {
+        showNotice(QStringLiteral("%1 already opens Markdown files.").arg(AppIdentity::displayName()));
+        return;
+    }
+    QPointer<MainWindow> self(this);
+    MarkdownHandler::makeDefault([self](bool ok, const QString &error) {
+        if (!self) return;
+        if (ok) self->showNotice(QStringLiteral("Markdown files now open in %1.").arg(AppIdentity::displayName()));
+        else QMessageBox::warning(self, QStringLiteral("Could not change the default app"), error);
+    });
+}
+
 void MainWindow::openDialog() {
     const QString path = QFileDialog::getOpenFileName(this, QStringLiteral("Open prompt"), {},
                                                       QStringLiteral("Text and Markdown (*.md *.markdown *.txt *.xml *.json *.yaml *.yml);;All files (*)"));
@@ -1553,6 +1624,12 @@ bool MainWindow::saveDocument(Document *document, bool saveAs) {
         }
         expected = existing.sha256;
         expectAbsent = false;
+    }
+    // Agent files such as memories/USER.md may live in a folder that does not exist yet.
+    const QString parentFolder = QFileInfo(path).absolutePath();
+    if (!QFileInfo(parentFolder).isDir() && !QDir().mkpath(parentFolder)) {
+        QMessageBox::warning(this, QStringLiteral("Could not save"), QStringLiteral("Could not create the folder %1.").arg(parentFolder));
+        return false;
     }
     const auto saved = FileIO::save(path, document->editor->textUtf8(), document->record.bom, expected, expectAbsent);
     if (!saved.ok) {
@@ -2007,7 +2084,8 @@ void MainWindow::showPalette(bool documentsOnly) {
             {QStringLiteral("Split Preview"), [this] { setViewMode(ViewMode::SplitPreview); }},
             {QStringLiteral("Browse drafts"), [this] { showLibrary(); }},
             {QStringLiteral("Jump to heading"), [this] { showOutline(); }},
-            {QStringLiteral("Snippets"), [this] { showSnippets(); }}
+            {QStringLiteral("Snippets"), [this] { showSnippets(); }},
+            {QStringLiteral("Agent files"), [this] { showAgentFiles(); }}
         };
     }
     for (const auto &draft : store_->listDrafts()) {

@@ -34,6 +34,12 @@ public:
     explicit MainWindow(Store *store, bool createBlankIfEmpty = true, QWidget *parent = nullptr);
     QString newPrompt();
     QString openPath(const QString &path, bool allowMissing = false);
+    // Opens a file handed over by the OS (Finder double-click, Open With, Dock
+    // drop) and brings the window forward. Replaces the untouched blank draft
+    // that a plain launch creates, so a cold launch shows only the file.
+    QString openFromSystem(const QString &path);
+    // Asks once whether to become the default app for .md files (macOS only).
+    void offerDefaultMarkdownHandler();
     bool attachWait(const QString &id);
     void cancelWait(const QString &id);
     bool hasDocument(const QString &id) const;
@@ -106,6 +112,7 @@ private:
     QTimer previewDebounce_;
     ViewMode viewMode_ = ViewMode::Editor;
     QString previewDocumentId_;
+    QString startupBlankId_;
     quint64 previewRevision_ = 0;
     qsizetype selectionScopeStart_ = 0;
     qsizetype selectionScopeEnd_ = 0;
@@ -154,6 +161,8 @@ private:
     void activateDraft(const QString &id);
     void closeTab(int index);
     void openDialog();
+    void showAgentFiles();
+    void makeDefaultMarkdownHandler();
     bool saveDocument(Document *document, bool saveAs = false);
     void saveAndReturn();
     void copyPrompt();
