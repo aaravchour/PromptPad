@@ -5,6 +5,7 @@
 #include "documents/FileIO.h"
 #include "documents/FindReplace.h"
 #include "editor/PromptEditor.h"
+#include "ui/AgentFilesDialog.h"
 #include "ui/LibraryPanel.h"
 #include "Scintilla.h"
 
@@ -642,6 +643,7 @@ void MainWindow::buildMenus() {
     add(tools, QStringLiteral("Browse drafts…"), QKeySequence(QStringLiteral("Ctrl+Shift+L")), [this] { showLibrary(); });
     add(tools, QStringLiteral("Starred drafts…"), {}, [this] { showLibrary(true); });
     add(tools, QStringLiteral("Snippets…"), {}, [this] { showSnippets(); });
+    add(tools, QStringLiteral("Agent files…"), QKeySequence(QStringLiteral("Ctrl+Shift+A")), [this] { showAgentFiles(); });
     tools->addSeparator();
     add(tools, QStringLiteral("Command palette…"), QKeySequence(QStringLiteral("Ctrl+Shift+P")), [this] { showPalette(); });
     add(tools, QStringLiteral("Quick document switch…"), QKeySequence(QStringLiteral("Ctrl+K")), [this] { showPalette(true); });
@@ -1519,6 +1521,19 @@ void MainWindow::closeTab(int index) {
     if (viewMode_ != ViewMode::Editor) renderPreview();
 }
 
+void MainWindow::showAgentFiles() {
+    AgentFilesDialog dialog(this);
+    QString chosen;
+    bool exists = true;
+    connect(&dialog, &AgentFilesDialog::openRequested, &dialog, [&chosen, &exists](const QString &path, bool fileExists) {
+        chosen = path;
+        exists = fileExists;
+    });
+    if (dialog.exec() != QDialog::Accepted || chosen.isEmpty()) return;
+    if (!openPath(chosen, !exists).isEmpty() && !exists)
+        showNotice(QStringLiteral("New file. Save to create it for the agent."), 5000);
+}
+
 void MainWindow::openDialog() {
     const QString path = QFileDialog::getOpenFileName(this, QStringLiteral("Open prompt"), {},
                                                       QStringLiteral("Text and Markdown (*.md *.markdown *.txt *.xml *.json *.yaml *.yml);;All files (*)"));
@@ -1553,6 +1568,12 @@ bool MainWindow::saveDocument(Document *document, bool saveAs) {
         }
         expected = existing.sha256;
         expectAbsent = false;
+    }
+    // Agent files such as memories/USER.md may live in a folder that does not exist yet.
+    const QString parentFolder = QFileInfo(path).absolutePath();
+    if (!QFileInfo(parentFolder).isDir() && !QDir().mkpath(parentFolder)) {
+        QMessageBox::warning(this, QStringLiteral("Could not save"), QStringLiteral("Could not create the folder %1.").arg(parentFolder));
+        return false;
     }
     const auto saved = FileIO::save(path, document->editor->textUtf8(), document->record.bom, expected, expectAbsent);
     if (!saved.ok) {
@@ -2007,7 +2028,8 @@ void MainWindow::showPalette(bool documentsOnly) {
             {QStringLiteral("Split Preview"), [this] { setViewMode(ViewMode::SplitPreview); }},
             {QStringLiteral("Browse drafts"), [this] { showLibrary(); }},
             {QStringLiteral("Jump to heading"), [this] { showOutline(); }},
-            {QStringLiteral("Snippets"), [this] { showSnippets(); }}
+            {QStringLiteral("Snippets"), [this] { showSnippets(); }},
+            {QStringLiteral("Agent files"), [this] { showAgentFiles(); }}
         };
     }
     for (const auto &draft : store_->listDrafts()) {

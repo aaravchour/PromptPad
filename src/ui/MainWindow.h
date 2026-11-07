@@ -154,6 +154,7 @@ private:
     void activateDraft(const QString &id);
     void closeTab(int index);
     void openDialog();
+    void showAgentFiles();
     bool saveDocument(Document *document, bool saveAs = false);
     void saveAndReturn();
     void copyPrompt();
