@@ -11,6 +11,7 @@
 #include <QContextMenuEvent>
 #include <QDialog>
 #include <QFile>
+#include <QFileInfo>
 #include <QGraphicsOpacityEffect>
 #include <QInputMethodEvent>
 #include <QLineEdit>
@@ -288,6 +289,56 @@ private slots:
         QCOMPARE(editor->textUtf8(), QByteArray("start") + QString::fromUtf8("🧭 {{braces}}").toUtf8());
         editor->send(SCI_UNDO);
         QCOMPARE(editor->textUtf8(), QByteArray("start"));
+    }
+    void systemOpenReplacesUntouchedStartupDraft() {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, temp.path());
+        const QString first = temp.filePath(QStringLiteral("first.md"));
+        const QString second = temp.filePath(QStringLiteral("second.md"));
+        for (const QString &path : {first, second}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("# Synthetic prompt\n");
+        }
+        Store store;
+        QString error;
+        QVERIFY2(store.open(temp.path(), &error), qPrintable(error));
+        MainWindow window(&store);
+        window.show();
+        auto *tabs = window.findChild<QTabWidget *>(QStringLiteral("documentTabs"));
+        QVERIFY(tabs);
+        QCOMPARE(tabs->count(), 1);
+        QVERIFY(!window.openFromSystem(first).isEmpty());
+        QCOMPARE(tabs->count(), 1);
+        QCOMPARE(tabs->tabToolTip(0), QFileInfo(first).canonicalFilePath());
+        QVERIFY(!window.openFromSystem(second).isEmpty());
+        QCOMPARE(tabs->count(), 2);
+        QCOMPARE(tabs->tabToolTip(tabs->currentIndex()), QFileInfo(second).canonicalFilePath());
+    }
+    void systemOpenKeepsStartupDraftWithText() {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, temp.path());
+        const QString path = temp.filePath(QStringLiteral("prompt.md"));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("# Synthetic prompt\n");
+        file.close();
+        Store store;
+        QString error;
+        QVERIFY2(store.open(temp.path(), &error), qPrintable(error));
+        MainWindow window(&store);
+        window.show();
+        auto *tabs = window.findChild<QTabWidget *>(QStringLiteral("documentTabs"));
+        auto *editor = window.findChild<PromptEditor *>();
+        QVERIFY(tabs);
+        QVERIFY(editor);
+        editor->setTextUtf8("Unsaved idea");
+        QVERIFY(!window.openFromSystem(path).isEmpty());
+        QCOMPARE(tabs->count(), 2);
     }
     void minimalWindowAndPreviewPreserveSource() {
         QTemporaryDir temp;
