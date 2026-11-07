@@ -38,8 +38,10 @@ add_library(promptpad_core STATIC
   src/documents/FindReplace.cpp src/documents/FindReplace.h
   src/storage/Store.cpp src/storage/Store.h
   src/launcher/Ipc.cpp src/launcher/Ipc.h
+  src/agents/AgentConfigs.cpp src/agents/AgentConfigs.h
   src/ui/MainWindow.cpp src/ui/MainWindow.h
-  src/ui/LibraryPanel.cpp src/ui/LibraryPanel.h src/ui/assets.qrc
+  src/ui/LibraryPanel.cpp src/ui/LibraryPanel.h
+  src/ui/AgentFilesDialog.cpp src/ui/AgentFilesDialog.h src/ui/assets.qrc
   src/platform/MarkdownHandler.h)
 if(APPLE)
   target_sources(promptpad_core PRIVATE src/platform/MarkdownHandler_mac.mm)
@@ -77,6 +79,10 @@ add_executable(find_tests tests/find_tests.cpp)
 target_link_libraries(find_tests PRIVATE promptpad_core Qt6::Test)
 add_test(NAME find_tests COMMAND find_tests)
 set_tests_properties(find_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_executable(agent_config_tests tests/agent_config_tests.cpp)
+target_link_libraries(agent_config_tests PRIVATE promptpad_core Qt6::Test)
+add_test(NAME agent_config_tests COMMAND agent_config_tests)
+set_tests_properties(agent_config_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 add_executable(ui_capture tests/ui_capture.cpp)
 target_link_libraries(ui_capture PRIVATE promptpad_core)
 add_executable(ipc_tests tests/ipc_tests.cpp)
