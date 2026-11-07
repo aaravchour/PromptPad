@@ -29,6 +29,10 @@ Other available tools include find and replace, heading navigation, section acti
 
 Download the [PromptPad 0.1.0 macOS Apple Silicon preview](https://github.com/aaravchour/PromptPad/releases/tag/v0.1.0), or build from source below. The release includes a SHA-256 checksum. Unzip the archive and open `PromptPad.app`. The bundle is ad-hoc signed, not notarised or Developer ID signed; macOS may prevent opening it under normal Gatekeeper settings. Windows and Linux binaries have not been verified.
 
+### Open Markdown files from Finder
+
+`PromptPad.app` registers itself for Markdown (`.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`) and offers itself under **Open With** for plain text. On first launch it asks once whether to become the default app for `.md` files; you can do this later from **PromptPad → Make PromptPad the Default for Markdown Files…**. macOS may show its own confirmation. After that, double-clicking a Markdown file opens it in PromptPad, or in a new tab if PromptPad is already running. You can also pick another default at any time from a file's **Get Info → Open with → Change All…**.
+
 ### macOS source build
 
 Requires macOS on Apple Silicon, Xcode Command Line Tools, CMake 3.24+, Ninja and Qt 6.6+ with Core, Widgets, Network, Sql, Concurrent, Core5Compat and Svg modules. The observed build used Qt 6.11.2 from Homebrew.

@@ -6,6 +6,7 @@
 #include "documents/FindReplace.h"
 #include "editor/PromptEditor.h"
 #include "ui/LibraryPanel.h"
+#include "platform/MarkdownHandler.h"
 #include "Scintilla.h"
 
 #include <QtConcurrent>
@@ -51,6 +52,7 @@
 #include <QRegion>
 #include <QScreen>
 #include <QScrollBar>
+#include <QPointer>
 #include <QSettings>
 #include <QSplitter>
 #include <QStatusBar>
@@ -73,6 +75,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
+#include <utility>
 
 namespace {
 class SafeMarkdownPreview final : public QTextBrowser {
@@ -149,7 +152,7 @@ MainWindow::MainWindow(Store *store, bool createBlankIfEmpty, QWidget *parent) :
     connect(&previewDebounce_, &QTimer::timeout, this, &MainWindow::renderPreview);
     connect(&watcher_, &QFileSystemWatcher::fileChanged, this, &MainWindow::onExternalChange);
     restoreSession();
-    if (documents_.empty() && createBlankIfEmpty) newPrompt();
+    if (documents_.empty() && createBlankIfEmpty) startupBlankId_ = newPrompt();
     updateStatus();
 }
 
@@ -513,6 +516,12 @@ void MainWindow::buildMenus() {
     saveReturnMenuAction_->setVisible(false);
     file->addSeparator();
     add(file, QStringLiteral("Close tab"), QKeySequence::Close, [this] { closeTab(tabs_->currentIndex()); });
+    if (MarkdownHandler::supported()) {
+        // Qt moves ApplicationSpecificRole actions into the macOS application menu.
+        QAction *makeDefault = add(file, QStringLiteral("Make %1 the Default for Markdown Files…").arg(AppIdentity::displayName()),
+                                   {}, [this] { makeDefaultMarkdownHandler(); });
+        makeDefault->setMenuRole(QAction::ApplicationSpecificRole);
+    }
 
     auto *edit = menuBar()->addMenu(QStringLiteral("Edit"));
     add(edit, QStringLiteral("Undo"), QKeySequence::Undo, [this] { if (auto *doc = current()) doc->editor->send(SCI_UNDO); });
@@ -1517,6 +1526,53 @@ void MainWindow::closeTab(int index) {
 
     updateStatus();
     if (viewMode_ != ViewMode::Editor) renderPreview();
+}
+
+QString MainWindow::openFromSystem(const QString &path) {
+    const QString blankId = std::exchange(startupBlankId_, QString());
+    const QString id = openPath(path);
+    if (id.isEmpty()) return id;
+    if (Document *blank = byId(blankId); blank && blank->record.path.isEmpty() && !blank->record.modified
+        && blank->editor->lengthBytes() == 0 && documents_.size() > 1)
+        closeTab(tabs_->indexOf(blank->page));
+    if (Document *opened = byId(id)) tabs_->setCurrentWidget(opened->page);
+    if (isMinimized()) showNormal();
+    else show();
+    raise();
+    activateWindow();
+    return id;
+}
+
+void MainWindow::offerDefaultMarkdownHandler() {
+    if (!MarkdownHandler::supported() || MarkdownHandler::isDefault()) return;
+    QSettings settings;
+    const QString key = QStringLiteral("launch/offeredDefaultMarkdownHandler");
+    if (settings.value(key, false).toBool()) return;
+    settings.setValue(key, true);
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle(QStringLiteral("Open Markdown files with %1?").arg(AppIdentity::displayName()));
+    box.setText(QStringLiteral("Make %1 the default app for .md files?").arg(AppIdentity::displayName()));
+    box.setInformativeText(QStringLiteral("Double-clicking a Markdown file in Finder will open it here. "
+                                          "You can change this later from the %1 menu.").arg(AppIdentity::displayName()));
+    QPushButton *yes = box.addButton(QStringLiteral("Make Default"), QMessageBox::AcceptRole);
+    box.addButton(QStringLiteral("Not Now"), QMessageBox::RejectRole);
+    box.setDefaultButton(yes);
+    box.exec();
+    if (box.clickedButton() == yes) makeDefaultMarkdownHandler();
+}
+
+void MainWindow::makeDefaultMarkdownHandler() {
+    if (MarkdownHandler::isDefault()) {
+        showNotice(QStringLiteral("%1 already opens Markdown files.").arg(AppIdentity::displayName()));
+        return;
+    }
+    QPointer<MainWindow> self(this);
+    MarkdownHandler::makeDefault([self](bool ok, const QString &error) {
+        if (!self) return;
+        if (ok) self->showNotice(QStringLiteral("Markdown files now open in %1.").arg(AppIdentity::displayName()));
+        else QMessageBox::warning(self, QStringLiteral("Could not change the default app"), error);
+    });
 }
 
 void MainWindow::openDialog() {
