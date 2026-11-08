@@ -17,7 +17,7 @@ It never calls AI, makes no network requests, has no telemetry and needs no acco
 
 ## Quick start
 
-1. Download the [PromptPad 0.1.0 macOS Apple Silicon preview](https://github.com/aaravchour/PromptPad/releases/tag/v0.1.0), unzip it and move `PromptPad.app` to `/Applications`. The build is not yet notarised; if macOS refuses to open it, right-click the app and choose **Open**.
+1. Download the [PromptPad 0.2.0 macOS Apple Silicon preview](https://github.com/aaravchour/PromptPad/releases/tag/v0.2.0), unzip it and move `PromptPad.app` to `/Applications`. The build is not yet notarised; if macOS refuses to open it, right-click the app and choose **Open**.
 2. Make PromptPad your external editor (add this to `~/.zshrc`):
 
    ```sh
